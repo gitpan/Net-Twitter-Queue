@@ -2,9 +2,10 @@ use strict;
 use warnings;
 package Net::Twitter::Queue;
 {
-  $Net::Twitter::Queue::VERSION = '0.1';
+  $Net::Twitter::Queue::VERSION = '0.2';
 }
 use Moose;
+use Try::Tiny;
 
 =head1 NAME
 
@@ -32,6 +33,7 @@ containing a config.yaml and tweets.yaml.  A cron line then invokes
 Net::Twitter::Queue each day to post a tweet:
 
     0 8 * * * cd /home/dinomite/twitter/dailywub; perl -MNet::Twitter::Queue -e '$q = Net::Twitter::Queue->new(); $q->tweet();'
+
 =cut
 
 use Carp;
@@ -40,19 +42,17 @@ use YAML::Any 0.70 qw(LoadFile DumpFile);
 
 =head1 ATTRIBUTES
 
-=over 1
+=over 4
 
 =item configFile
 
-The configuration file.
+The configuration file (default: config.yaml).
 
     # config.yaml
     consumer_key: <consumer_key>
     consumer_secret: <consumer_secret>
     access_token: <access_token>
     access_token_secret: <access_token_secret>
-
-Default: config.yaml
 
 =cut
 
@@ -71,14 +71,12 @@ has 'config' => (
 
 =item tweetsFile
 
-A file full of tweets
+A file full of tweets (default: tweets.yaml; set in config.yaml)
 
     # tweets.yaml
     - Inane location update via @FourSquare!
     - Eating a sandwich
     - Poopin'
-
-Default: tweets.yaml; change in config.yaml
 
 =cut
 
@@ -188,6 +186,7 @@ sub _build_tweetsFile {
 sub _build_tweets {
     my $self = shift;
 
+    # Helpfully explodes if the YAML can't be parsed
     my $tweets = LoadFile($self->tweetsFile);
     return $tweets;
 }
@@ -212,12 +211,21 @@ sub tweet {
     my $self = shift;
 
     my $tweet = shift @{$self->tweets};
-    my $result = $self->nt->update($tweet);
+    unless (defined $tweet) {
+        croak "No tweet found in " . $self->tweetsFile;
+    }
+
+    my $result;
+    try {
+        $result = $self->nt->update($tweet);
+    } catch {
+        carp "Unable to send tweet: $_";
+    };
 
     if ($result) {
         DumpFile($self->tweetsFile, \@{$self->tweets});
     } else {
-        carp "Tweeting didn't go well...";
+        carp "Tweeting didn't go well; " . $self->tweetsFile . " not altered.";
     }
 }
 

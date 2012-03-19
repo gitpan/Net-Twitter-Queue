@@ -3,7 +3,7 @@ LICENSE
 MANIFEST
 META.yml
 Makefile.PL
-README
+README.mkdn
 dist.ini
 lib/Net/Twitter/Queue.pm
 t/author-critic.t

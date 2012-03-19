@@ -26,11 +26,12 @@ my %WriteMakefileArgs = (
     "Carp" => 0,
     "Moose" => 0,
     "Net::Twitter" => "3.12000",
+    "Try::Tiny" => 0,
     "YAML::Any" => "0.70",
     "strict" => 0,
     "warnings" => 0
   },
-  "VERSION" => "0.1",
+  "VERSION" => "0.2",
   "test" => {
     "TESTS" => "t/*.t"
   }
